@@ -1,0 +1,5 @@
+﻿(define (fac n)
+  (if (< n 2) 1 (* n (fac (- n 1)))))
+(define (fib n)
+  (if (< n 3) 1 (+ (fib (- n 1)) (fib (- n 2)))))
+((if (= 3 3) fib fac) 6)

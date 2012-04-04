@@ -1,0 +1,4 @@
+*.*~
+Build/TestResult.xml
+Scheme-ish/**/bin
+Scheme-ish/**/obj

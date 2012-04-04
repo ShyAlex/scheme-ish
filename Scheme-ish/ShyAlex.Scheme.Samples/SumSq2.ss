@@ -1,0 +1,7 @@
+﻿(define (sumsq x y) 
+  (+ (* x x) (* y y)))
+(define (sumsq3 x y z)
+  (cond ((and (<= z x) (<= z y)) (sumsq x y))
+        ((and (<= y x) (<= y z)) (sumsq x z))
+        ((sumsq y z))))
+(sumsq3 3 5 4)
