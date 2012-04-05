@@ -53,6 +53,8 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
 
         private IEnumerator<ParseTree> currentProgram;
 
+        private readonly DispatcherTimer timer;
+
         public IList<ParseTree> CurrentTree { get { return new List<ParseTree> { currentProgram == null ? null : currentProgram.Current }; } }
 
         public IDictionary<String, RelayCommand> Samples { get; private set; }
@@ -63,12 +65,17 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
 
         public RelayCommand LoadSampleCommand { get; private set; }
 
+        public RelayCommand PlayCommand { get; private set; }
+
         public TreeClientApp(IList<String> sampleFiles)
         {
+            timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(0.3) };
+            timer.Tick += TimerStepForward;
             Program = String.Empty;
             ExecuteProgramCommand = new RelayCommand(ExecuteProgram);
             StepForwardCommand = new RelayCommand(StepForward, p => currentProgram != null);
             LoadSampleCommand = new RelayCommand(LoadSample);
+            PlayCommand = new RelayCommand(Play, p => currentProgram != null);
             Samples = sampleFiles.ToDictionary(s => s, s => LoadSampleCommand);
         }
 
@@ -77,6 +84,33 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
             var file = (String)param;
             Program = File.ReadAllText(file);
             RaisePropertyChanged("Program");
+        }
+
+        private void TimerStepForward(Object sender, EventArgs e)
+        {
+            if (currentProgram == null)
+            {
+                timer.Stop();
+            }
+
+            StepForward(null);
+        }
+
+        private void Play(Object ignored)
+        {
+            if (currentProgram == null)
+            {
+                return;
+            }
+
+            if (timer.IsEnabled)
+            {
+                timer.Stop();
+            }
+            else
+            {
+                timer.Start();
+            }
         }
 
         private void StepForward(Object ignored)
@@ -93,6 +127,7 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
             }
 
             StepForwardCommand.RaiseCanExecuteChanged();
+            PlayCommand.RaiseCanExecuteChanged();
             RaisePropertyChanged("CurrentTree");
             RaisePropertyChanged("Graph");
         }

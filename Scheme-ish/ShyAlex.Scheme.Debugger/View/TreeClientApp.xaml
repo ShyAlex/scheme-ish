@@ -35,6 +35,8 @@
                                 Content="Execute" />
                         <Button Command="{Binding StepForwardCommand}" 
                                 Content="Step Forward" />
+                        <Button Command="{Binding PlayCommand}"
+                                Content="Play/Pause" />
                     </StackPanel>
                     <TextBox AcceptsReturn="True"
                              HorizontalScrollBarVisibility="Auto"
