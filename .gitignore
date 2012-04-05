@@ -1,4 +1,5 @@
 *.*~
 Build/TestResult.xml
+Scheme-ish/**.suo
 Scheme-ish/**/bin
 Scheme-ish/**/obj
