@@ -94,19 +94,20 @@ let rec private collapseScopes isTopLevel = function
     | expr -> expr
 
 let rec private stepReduce (env:expression env) = function
-    | Scope(env', Literal(l)) -> Literal(l)
-    | Scope(env', Keyword(l)) -> match l with
-                                 | Newline -> reduceNewline []
-                                 | _ -> Keyword(l)
-    | Scope(env', Expression(Keyword(Define) :: args)) -> match args with
-                                                          | Variable(varName) :: statements -> match resolve1 stepReduce env' statements with
-                                                                                               | (true, newStatements) -> Scope(env', Expression(Keyword(Define) :: Variable(varName) :: newStatements))
-                                                                                               | (false, _) -> let newEnv = reduceDefine env args
-                                                                                                               Scope(newEnv, Literal(Nil))
-                                                          | _ -> let newEnv = reduceDefine env args
-                                                                 Scope(newEnv, Literal(Nil))
-    | Scope(env', Scope(env'', expr)) -> Scope(env', Scope(env'', expr) |> stepReduce env'')
-    | Scope(env', expr) -> Scope(env', stepReduce env' expr)
+    | Scope(env', expr) -> match expr with
+                           | Literal(l) -> Literal(l)
+                           | Keyword(k) -> match k with
+                                           | Newline -> reduceNewline []
+                                           | _ -> Keyword(k)
+                           | Expression(Keyword(Define) :: args) -> match args with
+                                                                    | Variable(varName) :: statements -> match resolve1 stepReduce env' statements with
+                                                                                                         | (true, newStatements) -> Scope(env', Expression(Keyword(Define) :: Variable(varName) :: newStatements))
+                                                                                                         | (false, _) -> let newEnv = reduceDefine env args
+                                                                                                                         Scope(newEnv, Literal(Nil))
+                                                                    | _ -> let newEnv = reduceDefine env args
+                                                                           Scope(newEnv, Literal(Nil))
+                           | Scope(env'', expr) -> Scope(env', Scope(env'', expr) |> stepReduce env'')
+                           | _ -> Scope(env', stepReduce env' expr)
     | Variable(var) -> match env.GetVar var with
                        | Some([], funcExpr :: []) -> funcExpr
                        | Some([], funcExprs) -> Expression(funcExprs)
