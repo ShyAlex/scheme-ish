@@ -1,23 +1,7 @@
 ﻿module Parser2
 
 open System
-open Keyword
-open Literal
-open Env
-
-type expression =
-    | Scope of expression env * expression
-    | Literal of literal
-    | Variable of string
-    | Keyword of keyword
-    | Expression of expression list
-    override this.ToString() =
-        match this with
-        | Scope(_, e) -> e.ToString()
-        | Literal(l) -> l.ToString()
-        | Variable(s) -> s
-        | Keyword(kw) -> kw.ToString()
-        | Expression(exprs) -> "(" + (exprs |> List.map (sprintf "%O") |> List.fold (fun s e -> s + " " + e) "") + " )"
+open Types
 
 let rec printExprWithScope = function
     | Scope(_, e) -> "[[ " + (printExprWithScope e) + " ]]"

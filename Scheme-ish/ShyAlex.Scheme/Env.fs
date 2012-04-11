@@ -1,28 +1,29 @@
 ﻿module Env
 
-open System.Collections.Generic
+open Types
 
-type 'a env() =
-    let exprs = Dictionary<string, 'a list * 'a list>()
-    member private this.Exprs = exprs
-    member this.GetVar name = 
-        let func = ref ([], [])
-        match exprs.TryGetValue(name, func) with
-        | true -> Some(!func)
-        | false -> None
-    member this.Copy() =
-        let copy = env()
-        for kvp in exprs do copy.Exprs.[kvp.Key] <- kvp.Value
-        copy
-    member this.SetVar name func = 
-        let copy = this.Copy()
-        copy.Exprs.[name] <- func
-        copy
-    member this.Combine (other:'a env) =
-        let newEnv = this.Copy()
-        for kvp in other.Exprs do newEnv.Exprs.[kvp.Key] <- kvp.Value
-        newEnv
-    member this.VarNames = exprs.Keys |> Seq.toList
-    override this.ToString() =
-        if exprs.Count < 1 then "[empty environment]\r\n" else
-        exprs |> Seq.fold (fun s kvp -> s + (sprintf "%O | %O\r\n" kvp.Key kvp.Value)) ""
+let private add (env:env) = function
+    | Variable(funcName), exprs -> env.SetVar funcName ([], [exprs])
+    | Expression(Variable(funcName) :: funcArgs), exprs -> env.SetVar funcName (funcArgs, [exprs])
+    | _ -> failwith "expected a variable or expression containing a variable"
+
+let addAll keys values (env:env) =
+    List.zip keys values |> List.fold (fun s (k, v) -> add s (k, v)) env
+
+let setVar x y (env:env) =
+    env.SetVar x y
+
+let newEnv () =
+    env()
+    |> setVar "+" ([], [ Keyword(Add) ])
+    |> setVar "-" ([], [ Keyword(Subtract) ])
+    |> setVar "*" ([], [ Keyword(Multiply) ])
+    |> setVar "/" ([], [ Keyword(Divide) ])
+    |> setVar "=" ([], [ Keyword(Equal) ])
+    |> setVar "<" ([], [ Keyword(LessThan) ])
+    |> setVar ">" ([], [ Keyword(GreaterThan) ])
+    |> setVar "<=" ([], [ Keyword(LessThanOrEqual) ])
+    |> setVar ">=" ([], [ Keyword(GreaterThanOrEqual) ])
+    |> setVar "not" ([ Variable("arg") ], [ Expression(Keyword(If) :: Expression(Keyword(Equal) :: Variable("arg") :: Literal(Boolean(false)) :: []) :: Literal(Boolean(true)) :: Literal(Boolean(false)) :: []) ])
+    |> setVar "display" ([], [ Keyword(Display) ])
+    |> setVar "newline" ([], [ Keyword(Newline) ])

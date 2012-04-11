@@ -1,11 +1,9 @@
 ﻿open System
 open System.Collections.Generic
 open System.Text
-open Keyword
-open Literal
+open Types
 open Lexer
 open Parser2
-open Env
 open Interpreter
 
 let private normalColor = Console.ForegroundColor
@@ -23,7 +21,7 @@ let private write c (s:string) =
 let private writen c (s:string) = write c (s + Environment.NewLine)
 
 let private run exprToStr =
-    let env = ref(ExpressionEnv.newEnv())
+    let env = ref(Env.newEnv())
     let buffer = StringBuilder()
     while true do
         write promptColor (if buffer.Length < 1 then ">> " else ".  ")

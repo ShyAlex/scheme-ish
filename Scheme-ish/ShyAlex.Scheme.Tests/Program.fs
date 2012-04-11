@@ -3,10 +3,9 @@
 open System
 open System.IO
 open System.Threading
+open Types
 open Lexer
-open Literal
 open Parser2
-open Env
 open Interpreter
 open NUnit.Framework
 
@@ -20,7 +19,7 @@ let private testTimeoutMs = 3000
 
 let private executeTest expectedResult file =
     let input = File.ReadAllText file
-    let env = ref(ExpressionEnv.newEnv())
+    let env = ref(Env.newEnv())
     let testResult = ref Timeout
     use mre = new ManualResetEvent(false)
     let thread = Thread(ThreadStart(fun () ->

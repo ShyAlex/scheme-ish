@@ -14,7 +14,7 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
             this.e = e;
         }
 
-        public static Environment FromEnv(Env.env<Parser2.expression> env)
+        public static Environment FromEnv(Types.env env)
         {
             return new Environment(env.ToString());
         }

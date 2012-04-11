@@ -43,12 +43,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Lexer.fs" />
-    <Compile Include="Keyword.fs" />
-    <Compile Include="Literal.fs" />
-    <Compile Include="Env.fs" />
     <Compile Include="Parser.fs" />
+    <Compile Include="Types.fs" />
     <Compile Include="Parser2.fs" />
-    <Compile Include="ExpressionEnv.fs" />
+    <Compile Include="Env.fs" />
     <Compile Include="Interpreter.fs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />

@@ -25,31 +25,31 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
             Color = color;
         }
 
-        public static ParseTree FromSchemeTree(Environment parentEnv, Parser2.expression exp)
+        public static ParseTree FromSchemeTree(Environment parentEnv, Types.expression exp)
         {
             if (exp.IsLiteral)
             {
-                var lit = (Parser2.expression.Literal)exp;
+                var lit = (Types.expression.Literal)exp;
                 return new ParseTree(parentEnv, null, lit.ToString(), Brushes.Cyan);
             }
             if (exp.IsKeyword)
             {
-                var kw = (Parser2.expression.Keyword)exp;
+                var kw = (Types.expression.Keyword)exp;
                 return new ParseTree(parentEnv, null, kw.ToString(), Brushes.DeepPink);
             }
             if (exp.IsVariable)
             {
-                var v = (Parser2.expression.Variable)exp;
+                var v = (Types.expression.Variable)exp;
                 return new ParseTree(parentEnv, null, v.ToString(), Brushes.WhiteSmoke);
             }
             if (exp.IsScope)
             {
-                var s = (Parser2.expression.Scope)exp;
+                var s = (Types.expression.Scope)exp;
                 var env = Environment.FromEnv(s.Item1);
                 return new ParseTree(env, new List<ParseTree> { FromSchemeTree(env, s.Item2) }, "env", Brushes.Lime);
             }
 
-            var e = (Parser2.expression.Expression)exp;
+            var e = (Types.expression.Expression)exp;
             var subExps = e.Item.Select(sube => FromSchemeTree(parentEnv, sube)).ToList();
             return new ParseTree(parentEnv, subExps, "expr", Brushes.Yellow);
         }

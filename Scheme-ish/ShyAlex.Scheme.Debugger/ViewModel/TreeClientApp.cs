@@ -159,7 +159,7 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
             }
 
             var parser1Output = Parser.parse(lexedOutput).Item2;
-            var env = ExpressionEnv.newEnv();
+            var env = Env.newEnv();
 
             return parser1Output.SelectMany(statement =>
             {

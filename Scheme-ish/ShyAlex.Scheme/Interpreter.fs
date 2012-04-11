@@ -2,18 +2,14 @@
 
 open System
 open System.Collections.Generic
-open Keyword
-open Literal
-open Parser2
-open Env
-open ExpressionEnv
+open Types
 
 let rec private reduceMath op this = function
     | [] -> this
-    | var :: tail -> reduceMath op (Literal(Number(op (toDouble this) (toDouble var)))) tail
+    | var :: tail -> reduceMath op (Literal(Number(op (Parser2.toDouble this) (Parser2.toDouble var)))) tail
     
 let private reduceComparison op = function
-    | expr1 :: expr2 :: [] -> op (toDouble expr1) (toDouble expr2) |> Boolean |> Literal
+    | expr1 :: expr2 :: [] -> op (Parser2.toDouble expr1) (Parser2.toDouble expr2) |> Boolean |> Literal
     | _ -> failwith "comparison operator has incorrect arguments"
 
 let rec private reduceCond env reduce = function
@@ -48,12 +44,12 @@ let rec reduceOr stepReduce = function
     | Literal(Boolean(false)) :: t -> Expression(Keyword(Or) :: t)
     | expr :: t -> Expression(Keyword(Or) :: stepReduce expr :: t)
 
-let private reduceDefine (env:expression env) = function
+let private reduceDefine (env:env) = function
     | Variable(x) :: varExprs -> env.SetVar x ([], varExprs)
     | Expression(Variable(x) :: funcArgs) :: funcExprs -> env.SetVar x (funcArgs, funcExprs)
     | _ -> failwith "define not as expected"
 
-let rec private reduceLet (env:expression env) (args:expression list) (body:expression list) =
+let rec private reduceLet (env:env) (args:expression list) (body:expression list) =
     let signature = args |> List.map (function Expression(Variable(v) :: expr :: []) -> Variable(v) | _ -> failwith "let not as expected")
     let lambdaArgs = args |> List.map (function Expression(_ :: expr :: []) -> expr | _ -> failwith "let not as expected")
     Expression(Expression(Keyword(Lambda) :: Expression(signature) :: body) :: lambdaArgs)
@@ -68,7 +64,7 @@ let reduceDisplay = function
                    Literal(Nil)
     | args -> failwith (sprintf "Invalid argument count: %i" args.Length)
 
-let rec private isLiteral (env:expression env) = function
+let rec private isLiteral (env:env) = function
     | Literal(_) -> true
     | Keyword(_) -> true
     | Expression(Keyword(Lambda) :: _) -> true
@@ -93,7 +89,7 @@ let rec private collapseScopes isTopLevel = function
     | Expression(exprs) -> Expression(exprs |> List.map (collapseScopes false))
     | expr -> expr
 
-let rec private stepReduce (env:expression env) = function
+let rec private stepReduce (env:env) = function
     | Scope(env', expr) -> match expr with
                            | Literal(l) -> Literal(l)
                            | Keyword(k) -> match k with
@@ -125,13 +121,13 @@ let rec private stepReduce (env:expression env) = function
                                                                                                       | (true, newArgs) -> Expression(Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: newArgs)
                                                                                                       | (false, _) -> match args with
                                                                                                                       | [] -> Expression(Keyword(Lambda) :: Expression(signature) :: exprs)
-                                                                                                                      | _ -> let newEnv = env |> ExpressionEnv.addAll signature args
+                                                                                                                      | _ -> let newEnv = env |> Env.addAll signature args
                                                                                                                              Scope(newEnv, Expression(exprs))
                            | Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: args -> match resolve1 stepReduce env' args with
                                                                                                                    | (true, newArgs) -> Expression(Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: newArgs)
                                                                                                                    | (false, _) -> match args with
                                                                                                                                    | [] -> Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs))
-                                                                                                                                   | _ -> let newEnv = env' |> ExpressionEnv.addAll signature args
+                                                                                                                                   | _ -> let newEnv = env' |> Env.addAll signature args
                                                                                                                                           Scope(newEnv, Expression(exprs))
                            | Keyword(Let) :: Expression(args) :: body -> reduceLet env args body
                            | Keyword(If) :: args -> reduceIf env stepReduce args
@@ -146,7 +142,7 @@ let rec private stepReduce (env:expression env) = function
                                                            | _ -> match env.GetVar funcName with
                                                                   | Some(funcArgs, funcExprs) -> if args.Length = 0 && funcArgs.Length <> 0 then Variable(funcName)
                                                                                                  elif funcArgs.Length = 0 && args.Length <> 0 then Expression(List.append funcExprs args)
-                                                                                                 else let newEnv = env |> ExpressionEnv.addAll funcArgs args                  
+                                                                                                 else let newEnv = env |> Env.addAll funcArgs args                  
                                                                                                       match funcExprs with
                                                                                                       | funcExpr :: [] -> Scope(newEnv, funcExpr)
                                                                                                       | _ -> Scope(newEnv, Expression(funcExprs))
