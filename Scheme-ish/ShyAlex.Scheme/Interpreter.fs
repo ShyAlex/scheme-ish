@@ -86,6 +86,12 @@ let reduceDefine stepReduce env tail = function
                                                           Scope(newEnv, Expression(Literal(Nil) :: tail))
     | _ -> failwith "define not as expected"
 
+let reduceLambda stepReduce env signature exprs args = 
+    match resolve1 stepReduce env args with
+    | (true, newArgs) -> Expression(Scope(env, Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: newArgs)
+    | (false, _) -> let newEnv = env |> Env.addAll signature args
+                    Scope(newEnv, Expression(exprs))
+
 let reduceScope stepReduce env env' = function
     | Literal(l) -> Literal(l)
     | Keyword(k) -> match k with
@@ -102,19 +108,11 @@ let reduceVariable env var = function
     | None -> failwith <| "unrecognized variable: " + var
 
 let reduceExpression stepReduce env = function
-    | Expression(Keyword(Define) :: args) :: tail -> reduceDefine stepReduce env tail args        
-    | Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: args -> match resolve1 stepReduce env args with
-                                                                               | (true, newArgs) -> Expression(Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: newArgs)
-                                                                               | (false, _) -> match args with
-                                                                                               | [] -> Expression(Keyword(Lambda) :: Expression(signature) :: exprs)
-                                                                                               | _ -> let newEnv = env |> Env.addAll signature args
-                                                                                                      Scope(newEnv, Expression(exprs))
-    | Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: args -> match resolve1 stepReduce env' args with
-                                                                                            | (true, newArgs) -> Expression(Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: newArgs)
-                                                                                            | (false, _) -> match args with
-                                                                                                            | [] -> Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs))
-                                                                                                            | _ -> let newEnv = env' |> Env.addAll signature args
-                                                                                                                   Scope(newEnv, Expression(exprs))
+    | Expression(Keyword(Define) :: args) :: tail -> reduceDefine stepReduce env tail args
+    | Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: [] -> Expression(Keyword(Lambda) :: Expression(signature) :: exprs)
+    | Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: args -> reduceLambda stepReduce env signature exprs args
+    | Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: [] -> Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs))
+    | Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: args -> reduceLambda stepReduce env' signature exprs args
     | Keyword(Let) :: Expression(args) :: body -> reduceLet env args body
     | Keyword(If) :: args -> reduceIf env stepReduce args
     | Keyword(Cond) :: args -> reduceCond env stepReduce args
