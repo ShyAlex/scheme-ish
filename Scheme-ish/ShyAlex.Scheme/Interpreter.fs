@@ -104,6 +104,26 @@ let private reduceEnvLookup stepReduce env funcName args =
                                                | _ -> Scope(newEnv, Expression(funcExprs))
            | None -> failwith <| "unrecognised variable: " + funcName
 
+let private reduceBaseExpression env = function
+    | Keyword(kw) :: [] -> match kw with
+                            | Newline -> reduceNewline []
+                            | _ -> Keyword(kw)
+    | Keyword(kw) :: h :: t -> match kw with
+                                | Add -> reduceMath (+) h t
+                                | Subtract -> reduceMath (-) h t
+                                | Divide -> reduceMath (/) h t
+                                | Multiply -> reduceMath (*) h t
+                                | LessThan -> reduceComparison (<) (h :: t)
+                                | LessThanOrEqual -> reduceComparison (<=) (h :: t)
+                                | GreaterThan -> reduceComparison (>) (h :: t)
+                                | GreaterThanOrEqual -> reduceComparison (>=) (h :: t)
+                                | Equal -> reduceEqual (h :: t)
+                                | Display -> reduceDisplay (h :: t)
+                                | _ -> failwith "unexpected keyword"
+    | l :: [] when isLiteral env l -> l
+    | [] -> Literal(Nil)
+    | _ -> failwith "unable to reduce expression"
+
 let private reduceScope stepReduce env env' = function
     | Literal(l) -> Literal(l)
     | Keyword(k) -> match k with
@@ -134,25 +154,7 @@ let private reduceExpression stepReduce env = function
     | Variable(funcName) :: args -> reduceEnvLookup stepReduce env funcName args
     | exprs -> match resolve1 stepReduce env exprs with
                | (true, newExprs) -> Expression(newExprs)
-               | _ -> match exprs with
-                      | Keyword(kw) :: [] -> match kw with
-                                             | Newline -> reduceNewline []
-                                             | _ -> Keyword(kw)
-                      | Keyword(kw) :: h :: t -> match kw with
-                                                 | Add -> reduceMath (+) h t
-                                                 | Subtract -> reduceMath (-) h t
-                                                 | Divide -> reduceMath (/) h t
-                                                 | Multiply -> reduceMath (*) h t
-                                                 | LessThan -> reduceComparison (<) (h :: t)
-                                                 | LessThanOrEqual -> reduceComparison (<=) (h :: t)
-                                                 | GreaterThan -> reduceComparison (>) (h :: t)
-                                                 | GreaterThanOrEqual -> reduceComparison (>=) (h :: t)
-                                                 | Equal -> reduceEqual (h :: t)
-                                                 | Display -> reduceDisplay (h :: t)
-                                                 | _ -> failwith "unexpected keyword"
-                      | l :: [] when isLiteral env l -> l
-                      | [] -> Literal(Nil)
-                      | _ -> failwith "unable to reduce expression"
+               | _ -> reduceBaseExpression env exprs
 
 let rec private stepReduce (env:env) = function
     | Scope(env', expr) -> reduceScope stepReduce env env' expr
