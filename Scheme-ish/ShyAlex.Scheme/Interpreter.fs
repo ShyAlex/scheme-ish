@@ -109,9 +109,7 @@ let private reduceVariable env var = function
 
 let private reduceExpression stepReduce env = function
     | Expression(Keyword(Define) :: args) :: tail -> reduceDefine stepReduce env tail args
-    | Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: [] -> Expression(Keyword(Lambda) :: Expression(signature) :: exprs)
     | Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: args -> reduceLambda stepReduce env signature exprs args
-    | Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: [] -> Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs))
     | Scope(env', Expression(Keyword(Lambda) :: Expression(signature) :: exprs)) :: args -> reduceLambda stepReduce env' signature exprs args
     | Keyword(Let) :: Expression(args) :: body -> reduceLet env args body
     | Keyword(If) :: args -> reduceIf env stepReduce args
@@ -153,18 +151,19 @@ let private reduceExpression stepReduce env = function
                       | [] -> Literal(Nil)
                       | _ -> failwith "unable to reduce expression"
 
+let rec private stepReduce (env:env) = function
+    | Scope(env', expr) -> reduceScope stepReduce env env' expr
+    | Variable(var) -> env.GetVar var |> reduceVariable env var
+    | Expression(exprs) -> reduceExpression stepReduce env exprs
+    | expr when isLiteral env expr -> expr
+    | _ -> failwith "unable to reduce expression"
+
 let rec private collapseScopes isTopLevel = function
     | Scope(env, Scope(env', expr)) when not isTopLevel -> Scope(env.Combine(env'), expr) |> collapseScopes false
     | Scope(env, Scope(env', expr)) -> Scope(env, Scope(env', expr) |> collapseScopes false)
     | Scope(env, expr) -> Scope(env, collapseScopes false expr)
     | Expression(exprs) -> Expression(exprs |> List.map (collapseScopes false))
     | expr -> expr
-
-let rec private stepReduce (env:env) = function
-    | Scope(env', expr) -> reduceScope stepReduce env env' expr
-    | Variable(var) -> env.GetVar var |> reduceVariable env var
-    | Expression(exprs) -> reduceExpression stepReduce env exprs
-    | literal -> literal
 
 let reduce env expr = 
     let rec reduce env expr =
