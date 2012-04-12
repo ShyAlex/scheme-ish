@@ -44,11 +44,6 @@ let rec reduceOr stepReduce = function
     | Literal(Boolean(false)) :: t -> Expression(Keyword(Or) :: t)
     | expr :: t -> Expression(Keyword(Or) :: stepReduce expr :: t)
 
-let private reduceDefine (env:env) = function
-    | Variable(x) :: varExprs -> env.SetVar x ([], varExprs)
-    | Expression(Variable(x) :: funcArgs) :: funcExprs -> env.SetVar x (funcArgs, funcExprs)
-    | _ -> failwith "define not as expected"
-
 let rec private reduceLet (env:env) (args:expression list) (body:expression list) =
     let signature = args |> List.map (function Expression(Variable(v) :: expr :: []) -> Variable(v) | _ -> failwith "let not as expected")
     let lambdaArgs = args |> List.map (function Expression(_ :: expr :: []) -> expr | _ -> failwith "let not as expected")
@@ -82,19 +77,22 @@ let private resolve1 stepReduce env args =
                                                else bail := true; stepReduce env arg)
     !bail, newArgs
 
+let reduceDefine stepReduce env tail = function
+    | Variable(varName) :: statements -> match resolve1 stepReduce env statements with
+                                         | (true, newStatements) -> Expression(Expression(Keyword(Define) :: Variable(varName) :: newStatements) :: tail)
+                                         | (false, _) -> let newEnv = env.SetVar varName ([], statements)
+                                                         Scope(newEnv, Expression(Literal(Nil) :: tail))
+    | Expression(Variable(x) :: funcArgs) :: funcExprs -> let newEnv = env.SetVar x (funcArgs, funcExprs)
+                                                          Scope(newEnv, Expression(Literal(Nil) :: tail))
+    | _ -> failwith "define not as expected"
+
 let reduceScope stepReduce env env' = function
     | Literal(l) -> Literal(l)
     | Keyword(k) -> match k with
                     | Newline -> reduceNewline []
                     | _ -> Keyword(k)
-    | Expression(Keyword(Define) :: args) -> match args with
-                                             | Variable(varName) :: statements -> match resolve1 stepReduce env' statements with
-                                                                                  | (true, newStatements) -> Scope(env', Expression(Keyword(Define) :: Variable(varName) :: newStatements))
-                                                                                  | (false, _) -> let newEnv = reduceDefine env args
-                                                                                                  Scope(newEnv, Literal(Nil))
-                                             | _ -> let newEnv = reduceDefine env args
-                                                    Scope(newEnv, Literal(Nil))
     | Scope(env'', expr) -> Scope(env', Scope(env'', expr) |> stepReduce env'')
+    | Expression(Keyword(Define) :: args) -> reduceDefine stepReduce env [] args
     | expr -> Scope(env', stepReduce env' expr)
 
 let reduceVariable env var = function
@@ -104,13 +102,7 @@ let reduceVariable env var = function
     | None -> failwith <| "unrecognized variable: " + var
 
 let reduceExpression stepReduce env = function
-    | Expression(Keyword(Define) :: args) :: tail -> match args with
-                                                     | Variable(varName) :: statements -> match resolve1 stepReduce env statements with
-                                                                                          | (true, newStatements) -> Expression(Expression(Keyword(Define) :: Variable(varName) :: newStatements) :: tail)
-                                                                                          | (false, _) -> let newEnv = reduceDefine env args
-                                                                                                          Scope(newEnv, Expression(Literal(Nil) :: tail))
-                                                     | _ -> let newEnv = reduceDefine env args
-                                                            Scope(newEnv, Expression(Literal(Nil) :: tail))
+    | Expression(Keyword(Define) :: args) :: tail -> reduceDefine stepReduce env tail args        
     | Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: args -> match resolve1 stepReduce env args with
                                                                                | (true, newArgs) -> Expression(Expression(Keyword(Lambda) :: Expression(signature) :: exprs) :: newArgs)
                                                                                | (false, _) -> match args with
