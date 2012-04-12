@@ -92,6 +92,18 @@ let private reduceLambda stepReduce env signature exprs args =
     | (false, _) -> let newEnv = env |> Env.addAll signature args
                     Scope(newEnv, Expression(exprs))
 
+let private reduceEnvLookup stepReduce env funcName args =
+    match resolve1 stepReduce env args with
+    | (true, newArgs) -> Expression(Variable(funcName) :: newArgs)
+    | _ -> match env.GetVar funcName with
+           | Some(funcArgs, funcExprs) -> if args.Length = 0 && funcArgs.Length <> 0 then Variable(funcName)
+                                          elif funcArgs.Length = 0 && args.Length <> 0 then Expression(List.append funcExprs args)
+                                          else let newEnv = env |> Env.addAll funcArgs args                  
+                                               match funcExprs with
+                                               | funcExpr :: [] -> Scope(newEnv, funcExpr)
+                                               | _ -> Scope(newEnv, Expression(funcExprs))
+           | None -> failwith <| "unrecognised variable: " + funcName
+
 let private reduceScope stepReduce env env' = function
     | Literal(l) -> Literal(l)
     | Keyword(k) -> match k with
@@ -119,16 +131,7 @@ let private reduceExpression stepReduce env = function
     | Literal(Nil) :: [] -> Literal(Nil)
     | Literal(Nil) :: arg :: [] -> arg
     | Literal(Nil) :: args -> Expression(args)
-    | Variable(funcName) :: args -> match resolve1 stepReduce env args with
-                                    | (true, newArgs) -> Expression(Variable(funcName) :: newArgs)
-                                    | _ -> match env.GetVar funcName with
-                                           | Some(funcArgs, funcExprs) -> if args.Length = 0 && funcArgs.Length <> 0 then Variable(funcName)
-                                                                          elif funcArgs.Length = 0 && args.Length <> 0 then Expression(List.append funcExprs args)
-                                                                          else let newEnv = env |> Env.addAll funcArgs args                  
-                                                                               match funcExprs with
-                                                                               | funcExpr :: [] -> Scope(newEnv, funcExpr)
-                                                                               | _ -> Scope(newEnv, Expression(funcExprs))
-                                           | None -> failwith <| "unrecognised variable: " + funcName
+    | Variable(funcName) :: args -> reduceEnvLookup stepReduce env funcName args
     | exprs -> match resolve1 stepReduce env exprs with
                | (true, newExprs) -> Expression(newExprs)
                | _ -> match exprs with
