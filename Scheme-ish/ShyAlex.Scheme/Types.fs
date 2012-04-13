@@ -89,6 +89,7 @@ and expression =
     | Variable of string
     | Keyword of keyword
     | Expression of expression list
+    | Error of string
     override this.ToString() =
         match this with
         | Scope(_, e) -> e.ToString()
@@ -96,6 +97,7 @@ and expression =
         | Variable(s) -> s
         | Keyword(kw) -> kw.ToString()
         | Expression(exprs) -> "(" + (exprs |> List.map (sprintf "%O") |> List.fold (fun s e -> s + " " + e) "") + " )"
+        | Error(e) -> e
 
 and env() =
     let exprs = Dictionary<string, expression list * expression list>()

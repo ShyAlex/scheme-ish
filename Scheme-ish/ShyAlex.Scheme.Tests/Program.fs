@@ -14,43 +14,50 @@ type result =
     | Result of expression
     | Ex of Exception
     | Timeout
+    override this.ToString() =
+        match this with
+        | Fail(s) -> sprintf "Fail(%s)" s
+        | Result(e) -> sprintf "Result(%O)" e
+        | Ex(ex) -> sprintf "Ex(%O)" ex
+        | Timeout -> "Timeout"
 
-let private testTimeoutMs = 3000
+let private testTimeoutMs = 1000.0
 
 let private executeTest expectedResult file =
     let input = File.ReadAllText file
     let env = ref(Env.newEnv())
-    let testResult = ref Timeout
-    use mre = new ManualResetEvent(false)
-    let thread = Thread(ThreadStart(fun () ->
-        try
-            try
-                let tokens = input |> lex
-                match tokens |> validateLex with
-                | Incomplete -> testResult := Fail("Statement was not complete")
-                | OverClosed -> testResult := Fail("Statement was over-closed")
-                | OpenString -> testResult := Fail("Statement was a non-terminated string")
-                | Valid -> let (chars, output) = tokens |> Parser.parse
-                           let program = output |> List.map parse
-                           let result = ref(Literal(Nil))
-                           for expr in program do reduce !env expr |> Seq.iter (fun (newResult, newEnv) -> Console.WriteLine(newResult |> printExprWithScope)
-                                                                                                           result := newResult
-                                                                                                           env := newEnv)
-                           match chars with
-                           | [] -> testResult := Result(!result)
-                           | _ -> testResult := Fail(sprintf "Some characters did not get parsed: %A" chars)
-            with ex -> testResult := Ex(ex)
-        finally ignore <| mre.Set()))
-    thread.Start()
-    if not <| mre.WaitOne(testTimeoutMs) then
-        thread.Abort()
-        testResult := Timeout
+    let testResult = ref (Fail("test did not update result"))
+    let endTime = DateTime.Now.AddMilliseconds(testTimeoutMs)
+    try
+        let tokens = input |> lex
+        match tokens |> validateLex with
+        | Incomplete -> testResult := Fail("Statement was not complete")
+        | OverClosed -> testResult := Fail("Statement was over-closed")
+        | OpenString -> testResult := Fail("Statement was a non-terminated string")
+        | Valid -> let (chars, output) = tokens |> Parser.parse
+                   let program = output |> List.map parse
+                   let result = ref(Literal(Nil))
+                   let allStatements = program |> Seq.map (fun expr -> reduce !env expr) |> Seq.concat
+                   use e = allStatements.GetEnumerator()
+                   let bail = ref false
+                   while not <| !bail && e.MoveNext() do
+                       let (newResult, newEnv) = e.Current
+                       Console.WriteLine(newResult |> printExprWithScope)
+                       result := newResult
+                       env := newEnv
+                       if DateTime.Now > endTime then 
+                           bail := true
+                           testResult := Timeout
+                   match !testResult, chars with
+                   | Timeout, _ -> ()
+                   | _, [] -> testResult := Result(!result)
+                   | _, _ -> testResult := Fail(sprintf "Some characters did not get parsed: %A" chars)
+    with ex -> testResult := Ex(ex)
     match !testResult with
     | Fail(s) -> Assert.Fail(s)
     | Ex(ex) -> Assert.Fail(sprintf "Program threw an exception:\r\ncommand:%s\r\nenv: %O\r\nexpected: %A\r\nactual: %A" input !env expectedResult ex)
     | result -> Assert.AreEqual(expectedResult, result, sprintf "The executed result was not as expected:\r\ncommand: %s\r\nactual: %O\r\nexpected: %O" input result expectedResult)
     
-
 [<Test>]
 let literalTen () = "LiteralTen.ss" |> executeTest (Result(Literal(Number(10.0))))
 
@@ -203,3 +210,12 @@ let newline () = "Newline.ss" |> executeTest (Result(Literal(Nil)))
 
 [<Test>]
 let facIterYComb () = "FacIterYComb.ss" |> executeTest (Result(Literal(Number(120.0))))
+
+[<Test>]
+let errorUnknownVariable () = "ErrorUnknownVariable.ss" |> executeTest (Result(Error("unknown variable: f")))
+
+[<Test>]
+let errorUnknownVariableExpression () = "ErrorUnknownVariableExpression.ss" |> executeTest (Result(Error("unknown variable: f")))
+
+[<Test>]
+let errorUnknownVariableExpressionExpression () = "ErrorUnknownVariableExpressionExpression.ss" |> executeTest (Result(Error("unknown variable: f")))

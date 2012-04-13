@@ -10,27 +10,27 @@ let rec private reduceMath op this = function
     
 let private reduceComparison op = function
     | expr1 :: expr2 :: [] -> op (Parser2.toDouble expr1) (Parser2.toDouble expr2) |> Boolean |> Literal
-    | _ -> failwith "comparison operator has incorrect arguments"
+    | _ -> Error("comparison operator has incorrect arguments")
 
 let rec private reduceCond env reduce = function
-    | [] -> failwith "no condition evaluated to #t"
+    | [] -> Error("no condition evaluated to #t")
     | cond :: tail -> match cond with
                       | Expression(Keyword(Else) :: expr :: []) -> expr
                       | Expression(Literal(Boolean(true)) :: expr :: []) -> expr
                       | Expression(Literal(Boolean(false)) :: expr :: []) -> Expression(Keyword(Cond) :: tail)
                       | Expression(expr :: []) -> expr
                       | Expression(condExpr :: expr) -> Expression(Keyword(Cond) :: Expression(reduce env condExpr :: expr) :: tail) 
-                      | _ -> failwith "cond not as expected"
+                      | _ -> Error("cond not as expected")
 
 let private reduceIf env reduce = function
     | condExpr :: trueExpr :: falseExpr :: [] -> match condExpr with
                                                  | Literal(Boolean(b)) -> if b then trueExpr else falseExpr
                                                  | _ -> Expression(Keyword(If) :: reduce env condExpr :: trueExpr :: falseExpr :: [])
-    | _ -> failwith "if not as expected"
+    | _ -> Error("if not as expected")
 
 let private reduceEqual = function
     | expr1 :: expr2 :: [] -> expr1.Equals(expr2) |> Boolean |> Literal
-    | _ -> failwith "= not as expected"
+    | _ -> Error("= not as expected")
 
 let rec private reduceAnd stepReduce = function
     | [] -> Literal(Boolean(true))
@@ -45,23 +45,24 @@ let rec private reduceOr stepReduce = function
     | expr :: t -> Expression(Keyword(Or) :: stepReduce expr :: t)
 
 let rec private reduceLet (env:env) (args:expression list) (body:expression list) =
-    let signature = args |> List.map (function Expression(Variable(v) :: expr :: []) -> Variable(v) | _ -> failwith "let not as expected")
-    let lambdaArgs = args |> List.map (function Expression(_ :: expr :: []) -> expr | _ -> failwith "let not as expected")
+    let signature = args |> List.map (function Expression(Variable(v) :: expr :: []) -> Variable(v) | _ -> Error("let not as expected"))
+    let lambdaArgs = args |> List.map (function Expression(_ :: expr :: []) -> expr | _ -> Error("let not as expected"))
     Expression(Expression(Keyword(Lambda) :: Expression(signature) :: body) :: lambdaArgs)
 
 let private reduceNewline = function
     | [] -> printfn ""
             Literal(Nil)
-    | args -> failwith (sprintf "Invalid argument count: %i" args.Length)
+    | args -> Error(sprintf "invalid argument count: %i" args.Length)
 
 let private reduceDisplay = function
     | arg :: [] -> printf "%O" arg
                    Literal(Nil)
-    | args -> failwith (sprintf "Invalid argument count: %i" args.Length)
+    | args -> Error(sprintf "invalid argument count: %i" args.Length)
 
 let rec private isLiteral (env:env) = function
     | Literal(_) -> true
     | Keyword(_) -> true
+    | Error(_) -> true
     | Expression(Keyword(Lambda) :: _) -> true
     | Scope(_, Literal(_)) -> false
     | Scope(_, Keyword(_)) -> false
@@ -84,7 +85,7 @@ let private reduceDefine stepReduce env tail = function
                                                          Scope(newEnv, Expression(Literal(Nil) :: tail))
     | Expression(Variable(x) :: funcArgs) :: funcExprs -> let newEnv = env.SetVar x (funcArgs, funcExprs)
                                                           Scope(newEnv, Expression(Literal(Nil) :: tail))
-    | _ -> failwith "define not as expected"
+    | _ -> Error("define not as expected")
 
 let private reduceLambda stepReduce env signature exprs args = 
     match resolve1 stepReduce env args with
@@ -102,7 +103,7 @@ let private reduceEnvLookup stepReduce env funcName args =
                                                match funcExprs with
                                                | funcExpr :: [] -> Scope(newEnv, funcExpr)
                                                | _ -> Scope(newEnv, Expression(funcExprs))
-           | None -> failwith <| "unrecognised variable: " + funcName
+           | None -> Error("unknown variable: " + funcName)
 
 let private reduceBaseExpression env = function
     | Keyword(kw) :: [] -> match kw with
@@ -119,13 +120,14 @@ let private reduceBaseExpression env = function
                                 | GreaterThanOrEqual -> reduceComparison (>=) (h :: t)
                                 | Equal -> reduceEqual (h :: t)
                                 | Display -> reduceDisplay (h :: t)
-                                | _ -> failwith "unexpected keyword"
+                                | _ -> Error("unexpected keyword")
     | l :: [] when isLiteral env l -> l
     | [] -> Literal(Nil)
-    | _ -> failwith "unable to reduce expression"
+    | _ -> Error("unable to reduce expression")
 
 let private reduceScope stepReduce env env' = function
     | Literal(l) -> Literal(l)
+    | Error(e) -> Error(e)
     | Keyword(k) -> match k with
                     | Newline -> reduceNewline []
                     | _ -> Keyword(k)
@@ -137,7 +139,7 @@ let private reduceVariable env var = function
     | Some([], funcExpr :: []) -> funcExpr
     | Some([], funcExprs) -> Expression(funcExprs)
     | Some(funcArgs, funcExprs) -> Expression(Keyword(Lambda) :: Expression(funcArgs) :: funcExprs)
-    | None -> failwith <| "unrecognized variable: " + var
+    | None -> Error("unknown variable: " + var)
 
 let private reduceExpression stepReduce env = function
     | Expression(Keyword(Define) :: args) :: tail -> reduceDefine stepReduce env tail args
@@ -161,7 +163,7 @@ let rec private stepReduce (env:env) = function
     | Variable(var) -> env.GetVar var |> reduceVariable env var
     | Expression(exprs) -> reduceExpression stepReduce env exprs
     | expr when isLiteral env expr -> expr
-    | _ -> failwith "unable to reduce expression"
+    | _ -> Error("unable to reduce expression")
 
 let rec private collapseScopes isTopLevel = function
     | Scope(env, Scope(env', expr)) when not isTopLevel -> Scope(env.Combine(env'), expr) |> collapseScopes false
@@ -175,11 +177,9 @@ let reduce env expr =
         seq { let expr = expr |> collapseScopes true
               let topLevelEnv = ref env
               match expr with
-              | Literal(l) -> yield expr, !topLevelEnv
-              | Keyword(Exit) -> yield expr, !topLevelEnv
               | Scope(env', _) -> topLevelEnv := env'
                                   yield expr, !topLevelEnv
                                   yield! stepReduce !topLevelEnv expr |> reduce !topLevelEnv
               | expr -> yield expr, !topLevelEnv
-                        yield! stepReduce !topLevelEnv expr |> reduce !topLevelEnv }
+                        if not <| isLiteral !topLevelEnv expr then yield! stepReduce !topLevelEnv expr |> reduce !topLevelEnv }
     Scope(env, expr) |> reduce env

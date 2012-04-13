@@ -42,6 +42,11 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
                 var v = (Types.expression.Variable)exp;
                 return new ParseTree(parentEnv, null, v.ToString(), Brushes.WhiteSmoke);
             }
+            if (exp.IsError)
+            {
+                var err = (Types.expression.Error)exp;
+                return new ParseTree(parentEnv, null, err.ToString(), Brushes.Red);
+            }
             if (exp.IsScope)
             {
                 var s = (Types.expression.Scope)exp;

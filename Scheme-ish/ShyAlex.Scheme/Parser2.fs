@@ -9,6 +9,7 @@ let rec printExprWithScope = function
     | Variable(s) -> s
     | Keyword(kw) -> kw.ToString()
     | Expression(exprs) -> "(" + (exprs |> List.map printExprWithScope |> List.fold (fun s e -> s + " " + e) "") + " )"
+    | Error(e) -> e
     
 let toDouble = function Literal(Number(n)) -> n | _ -> failwith "expected number"
 

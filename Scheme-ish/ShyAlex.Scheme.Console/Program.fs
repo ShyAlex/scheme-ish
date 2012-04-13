@@ -39,6 +39,7 @@ let private run exprToStr =
                        (!env).ToString() |> write envTraceColor
                        let output, color = match !lastResult with
                                            | Keyword(Exit) -> exit 0
+                                           | Error(e) -> e, errorColor
                                            | Literal(l) -> l.ToString(), responseColor
                                            | _ -> "unknown error, result was " + ((!lastResult).ToString()), errorColor
                        if output <> null then writen color output
