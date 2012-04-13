@@ -13,13 +13,13 @@
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="Samples"
                           ItemsSource="{Binding Samples}">
-                    <MenuItem.ItemTemplate>
-                        <DataTemplate>
-                            <MenuItem Header="{Binding Key}" 
-                                      Command="{Binding Value}" 
-                                      CommandParameter="{Binding Key}" />
-                        </DataTemplate>
-                    </MenuItem.ItemTemplate>
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="{Binding Key}" />
+                            <Setter Property="Command" Value="{Binding Value}" />
+                            <Setter Property="CommandParameter" Value="{Binding Key}" />
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
                 </MenuItem>
             </Menu>
             <Grid>

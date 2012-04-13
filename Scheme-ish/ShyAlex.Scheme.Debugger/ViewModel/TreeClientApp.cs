@@ -63,8 +63,6 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
 
         public RelayCommand StepForwardCommand { get; private set; }
 
-        public RelayCommand LoadSampleCommand { get; private set; }
-
         public RelayCommand PlayCommand { get; private set; }
 
         public TreeClientApp(IList<String> sampleFiles)
@@ -74,9 +72,8 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
             Program = String.Empty;
             ExecuteProgramCommand = new RelayCommand(ExecuteProgram);
             StepForwardCommand = new RelayCommand(StepForward, p => currentProgram != null);
-            LoadSampleCommand = new RelayCommand(LoadSample);
             PlayCommand = new RelayCommand(Play, p => currentProgram != null);
-            Samples = sampleFiles.ToDictionary(s => s, s => LoadSampleCommand);
+            Samples = sampleFiles.ToDictionary(s => Path.GetFileName(s), s => new RelayCommand(o => LoadSample(s)));
         }
 
         private void LoadSample(Object param)
