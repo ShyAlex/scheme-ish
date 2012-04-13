@@ -4,13 +4,14 @@ open System
 open System.Collections.Generic
 open Types
 
-let rec private reduceMath op this = function
-    | [] -> this
-    | var :: tail -> reduceMath op (Literal(Number(op (Parser2.toDouble this) (Parser2.toDouble var)))) tail
+let rec private reduceMath op = function
+    | Literal(Number(n)) :: [] -> Literal(Number(n))
+    | Literal(Number(n)) :: Literal(Number(n')) :: tail -> reduceMath op (Literal(Number(op n n')) :: tail)
+    | _ -> Error("expected number")
     
 let private reduceComparison op = function
-    | expr1 :: expr2 :: [] -> op (Parser2.toDouble expr1) (Parser2.toDouble expr2) |> Boolean |> Literal
-    | _ -> Error("comparison operator has incorrect arguments")
+    | Literal(Number(n)) :: Literal(Number(n')) :: [] -> Literal(Boolean(op n n'))
+    | _ -> Error("expected two numbers")
 
 let rec private reduceCond env reduce = function
     | [] -> Error("no condition evaluated to #t")
@@ -109,18 +110,18 @@ let private reduceBaseExpression env = function
     | Keyword(kw) :: [] -> match kw with
                             | Newline -> reduceNewline []
                             | _ -> Keyword(kw)
-    | Keyword(kw) :: h :: t -> match kw with
-                                | Add -> reduceMath (+) h t
-                                | Subtract -> reduceMath (-) h t
-                                | Divide -> reduceMath (/) h t
-                                | Multiply -> reduceMath (*) h t
-                                | LessThan -> reduceComparison (<) (h :: t)
-                                | LessThanOrEqual -> reduceComparison (<=) (h :: t)
-                                | GreaterThan -> reduceComparison (>) (h :: t)
-                                | GreaterThanOrEqual -> reduceComparison (>=) (h :: t)
-                                | Equal -> reduceEqual (h :: t)
-                                | Display -> reduceDisplay (h :: t)
-                                | _ -> Error("unexpected keyword")
+    | Keyword(kw) :: args -> match kw with
+                             | Add -> reduceMath (+) args
+                             | Subtract -> reduceMath (-) args
+                             | Divide -> reduceMath (/) args
+                             | Multiply -> reduceMath (*) args
+                             | LessThan -> reduceComparison (<) args
+                             | LessThanOrEqual -> reduceComparison (<=) args
+                             | GreaterThan -> reduceComparison (>) args
+                             | GreaterThanOrEqual -> reduceComparison (>=) args
+                             | Equal -> reduceEqual args
+                             | Display -> reduceDisplay args
+                             | _ -> Error("unexpected keyword")
     | l :: [] when isLiteral env l -> l
     | [] -> Literal(Nil)
     | _ -> Error("unable to reduce expression")

@@ -11,10 +11,6 @@ let rec printExprWithScope = function
     | Expression(exprs) -> "(" + (exprs |> List.map printExprWithScope |> List.fold (fun s e -> s + " " + e) "") + " )"
     | Error(e) -> e
     
-let toDouble = function Literal(Number(n)) -> n | _ -> failwith "expected number"
-
-let toBoolean = function Literal(Boolean(b)) -> b | _ -> failwith "expected boolean"
-
 let rec parse = function
     | Parser.Token(s) -> match keyword.FromString s with
                          | Some(kw) -> Keyword(kw)

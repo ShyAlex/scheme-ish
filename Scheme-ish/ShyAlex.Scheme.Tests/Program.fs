@@ -219,3 +219,9 @@ let errorUnknownVariableExpression () = "ErrorUnknownVariableExpression.ss" |> e
 
 [<Test>]
 let errorUnknownVariableExpressionExpression () = "ErrorUnknownVariableExpressionExpression.ss" |> executeTest (Result(Error("unknown variable: f")))
+
+[<Test>]
+let errorExpectedNumber () = "ErrorExpectedNumber.ss" |> executeTest (Result(Error("expected number")))
+
+[<Test>]
+let errorExpectedTwoNumbers () = "ErrorExpectedTwoNumbers.ss" |> executeTest (Result(Error("expected two numbers")))
