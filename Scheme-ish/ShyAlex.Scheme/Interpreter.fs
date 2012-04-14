@@ -4,9 +4,9 @@ open System
 open System.Collections.Generic
 open Types
 
-let rec private reduceMath op = function
+let rec private reduceMath kw op = function
     | Literal(Number(n)) :: [] -> Literal(Number(n))
-    | Literal(Number(n)) :: Literal(Number(n')) :: tail -> reduceMath op (Literal(Number(op n n')) :: tail)
+    | Literal(Number(n)) :: Literal(Number(n')) :: tail -> Expression(kw :: (Literal(Number(op n n')) :: tail))
     | _ -> Error("expected number")
     
 let private reduceComparison op = function
@@ -111,10 +111,10 @@ let private reduceBaseExpression env = function
                             | Newline -> reduceNewline []
                             | _ -> Keyword(kw)
     | Keyword(kw) :: args -> match kw with
-                             | Add -> reduceMath (+) args
-                             | Subtract -> reduceMath (-) args
-                             | Divide -> reduceMath (/) args
-                             | Multiply -> reduceMath (*) args
+                             | Add -> reduceMath (Keyword(kw)) (+) args
+                             | Subtract -> reduceMath (Keyword(kw)) (-) args
+                             | Divide -> reduceMath (Keyword(kw)) (/) args
+                             | Multiply -> reduceMath (Keyword(kw)) (*) args
                              | LessThan -> reduceComparison (<) args
                              | LessThanOrEqual -> reduceComparison (<=) args
                              | GreaterThan -> reduceComparison (>) args
