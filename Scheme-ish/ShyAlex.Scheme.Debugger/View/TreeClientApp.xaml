@@ -23,11 +23,11 @@
                 </MenuItem>
             </Menu>
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition />
-                    <RowDefinition Height="5" />
-                    <RowDefinition />
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="5" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Bottom" 
                                 Orientation="Horizontal">
@@ -46,9 +46,8 @@
                 </DockPanel>
                 <GridSplitter HorizontalAlignment="Stretch"
                               VerticalAlignment="Stretch"
-                              Grid.Row="1" 
-                              Grid.ColumnSpan="3" />
-                <z:ZoomControl Grid.Row="2"
+                              Grid.Column="1" />
+                <z:ZoomControl Grid.Column="2"
                                Background="Black">
                     <c:TreeGraphLayoutControl Graph="{Binding Graph}"
                                               LayoutAlgorithmType="Tree"
