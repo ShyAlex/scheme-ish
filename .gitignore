@@ -4,3 +4,5 @@ Build/TestResult.xml
 Scheme-ish/**.suo
 Scheme-ish/**/bin
 Scheme-ish/**/obj
+**.v11.suo
+**.v12.suo
