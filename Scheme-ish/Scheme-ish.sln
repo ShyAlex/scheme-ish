@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ShyAlex.Scheme", "ShyAlex.Scheme\ShyAlex.Scheme.fsproj", "{89C7B5DC-3595-4FBD-83EE-2689D5AA9967}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ShyAlex.Scheme.Tests", "ShyAlex.Scheme.Tests\ShyAlex.Scheme.Tests.fsproj", "{2314852D-724A-414E-A06A-F06B4734C932}"
