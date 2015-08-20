@@ -18,6 +18,10 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
     {
         public event PropertyChangedEventHandler PropertyChanged = (o, e) => { };
 
+        public event Action SteppedForward = () => { };
+
+        public event Action SteppingForward = () => { };
+
         public String Program { get; set; }
 
         public BidirectionalGraph<ParseTree, Edge<ParseTree>> Graph
@@ -117,6 +121,8 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
                 return;
             }
 
+            SteppingForward();
+
             if (!currentProgram.MoveNext())
             {
                 currentProgram.Dispose();
@@ -127,6 +133,7 @@ namespace ShyAlex.Scheme.Debugger.ViewModel
             PlayCommand.RaiseCanExecuteChanged();
             RaisePropertyChanged("CurrentTree");
             RaisePropertyChanged("Graph");
+            SteppedForward();
         }
 
         private void ExecuteProgram(Object ignored)
